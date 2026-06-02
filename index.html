@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#101214">
+    <title>Phone Ruler</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell" aria-label="Phone ruler">
+      <section class="setup-panel" aria-label="Ruler setup">
+        <div class="setup-topline">
+          <h1>Phone Ruler</h1>
+          <output id="detectionStatus" class="status-dot">Detecting...</output>
+        </div>
+
+        <div class="selector-grid">
+          <label>
+            <span>Make</span>
+            <input id="makeInput" list="makeList" autocomplete="organization" inputmode="search" aria-describedby="makeHint">
+            <datalist id="makeList"></datalist>
+          </label>
+          <label>
+            <span>Model</span>
+            <input id="modelInput" list="modelList" autocomplete="off" inputmode="search">
+            <datalist id="modelList"></datalist>
+          </label>
+        </div>
+        <p id="makeHint" class="sr-only">Start typing a phone maker, then choose a phone model.</p>
+
+        <div class="tool-row">
+          <fieldset class="segmented" aria-label="Units">
+            <legend>Units</legend>
+            <button type="button" class="unit-button active" data-unit="cm">cm</button>
+            <button type="button" class="unit-button" data-unit="in">in</button>
+          </fieldset>
+          <button id="calibrateButton" class="icon-button" type="button" aria-expanded="false">
+            <span aria-hidden="true">◎</span>
+            <span>Calibrate</span>
+          </button>
+          <button id="lockButton" class="square-button" type="button" aria-pressed="false" title="Lock zero marker">⌖</button>
+        </div>
+
+        <form id="calibrationForm" class="calibration-panel" hidden>
+          <label>
+            <span>Visible screen height</span>
+            <input id="heightOverride" type="number" min="40" max="260" step="0.1" inputmode="decimal">
+          </label>
+          <button type="submit">Apply</button>
+          <button id="resetCalibration" type="button">Reset</button>
+        </form>
+      </section>
+
+      <section class="readout-bar" aria-label="Current measurement">
+        <div>
+          <span class="readout-label">From zero</span>
+          <output id="topReadout">0.0 cm at top</output>
+        </div>
+        <div>
+          <span class="readout-label">Visible span</span>
+          <output id="spanReadout">0.0 cm</output>
+        </div>
+      </section>
+
+      <section id="ruler" class="ruler" aria-label="Measurement ruler">
+        <canvas id="rulerCanvas"></canvas>
+        <div id="zeroMarker" class="zero-marker" role="slider" tabindex="0" aria-label="Zero marker" aria-valuemin="-200" aria-valuemax="200" aria-valuenow="0">
+          <span class="grip" aria-hidden="true"></span>
+          <strong>0</strong>
+        </div>
+        <div class="zero-line" aria-hidden="true"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
