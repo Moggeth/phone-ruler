@@ -254,6 +254,44 @@ function drawTicks(ctx, width, height) {
   ctx.fillStyle = "#f7fafc";
   ctx.lineCap = "butt";
   ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+
+  const centerX = width / 2;
+  const labelX = centerX + 24 * scale;
+  const labelPadX = 7 * scale;
+  const labelPadY = 5 * scale;
+
+  const drawHorizontalSegments = (y, length, gapStart = null, gapEnd = null) => {
+    ctx.beginPath();
+    if (gapStart === null || gapEnd === null) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(length, y);
+      ctx.moveTo(width - length, y);
+      ctx.lineTo(width, y);
+    } else {
+      const leftEnd = Math.max(0, Math.min(gapStart, length));
+      const rightStart = Math.min(width, Math.max(gapEnd, width - length));
+      ctx.moveTo(0, y);
+      ctx.lineTo(leftEnd, y);
+      ctx.moveTo(rightStart, y);
+      ctx.lineTo(width, y);
+    }
+    ctx.stroke();
+  };
+
+  const drawLabel = (text, x, y, size, weight, alpha = 1) => {
+    ctx.font = `${weight} ${Math.round(size * scale)}px ui-sans-serif, system-ui, sans-serif`;
+    const metrics = ctx.measureText(text);
+    const textHeight = size * scale;
+    ctx.save();
+    ctx.fillStyle = "#101214";
+    ctx.globalAlpha = 0.96;
+    ctx.fillRect(x - labelPadX, y - textHeight / 2 - labelPadY, metrics.width + labelPadX * 2, textHeight + labelPadY * 2);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#f7fafc";
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  };
 
   for (let offset = -maxOffset; offset <= maxOffset; offset += minorStep) {
     const y = zeroY + offset;
@@ -263,35 +301,32 @@ function drawTicks(ctx, width, height) {
     const isMajor = minorIndex % 10 === 0;
     const isHalf = minorIndex % 5 === 0;
     const length = isMajor ? width : isHalf ? Math.min(140 * scale, width * 0.23) : Math.min(74 * scale, width * 0.13);
-    ctx.lineWidth = isMajor ? 3 * scale : 1.5 * scale;
-
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(length, y);
-    ctx.moveTo(width - length, y);
-    ctx.lineTo(width, y);
-    ctx.stroke();
+    ctx.lineWidth = isMajor ? 2.4 * scale : 1.45 * scale;
 
     if (isMajor && Math.abs(offset) > minorStep) {
-      const value = Math.abs(Math.round(offset / labelStep));
-      ctx.globalAlpha = 1;
-      ctx.font = `700 ${Math.round(18 * scale)}px ui-sans-serif, system-ui, sans-serif`;
-      ctx.fillText(String(value), width / 2 + 24 * scale, y);
+      const label = String(Math.abs(Math.round(offset / labelStep)));
+      ctx.font = `780 ${Math.round(18 * scale)}px ui-sans-serif, system-ui, sans-serif`;
+      const labelWidth = ctx.measureText(label).width;
+      const gapStart = labelX - labelPadX - 2 * scale;
+      const gapEnd = labelX + labelWidth + labelPadX + 2 * scale;
+      drawHorizontalSegments(y, length, gapStart, gapEnd);
+      drawLabel(label, labelX, y, 18, 780, 1);
+
       ctx.beginPath();
-      ctx.moveTo(width / 2 - 16 * scale, y);
-      ctx.lineTo(width / 2 + 10 * scale, y);
+      ctx.moveTo(centerX - 16 * scale, y);
+      ctx.lineTo(centerX + 8 * scale, y);
       ctx.stroke();
     } else if (isHalf && Math.abs(offset) > labelStep * 0.75) {
-      const value = Math.abs(offset / labelStep);
-      ctx.globalAlpha = 0.7;
-      ctx.font = `650 ${Math.round(12 * scale)}px ui-sans-serif, system-ui, sans-serif`;
-      ctx.fillText(value.toFixed(1), width / 2 + 24 * scale, y);
-      ctx.globalAlpha = 1;
+      drawHorizontalSegments(y, length);
+      drawLabel(Math.abs(offset / labelStep).toFixed(1), labelX, y, 12, 650, 0.76);
     } else if (!isMajor && minorIndex % 2 === 0) {
+      drawHorizontalSegments(y, length);
       ctx.beginPath();
-      ctx.moveTo(width / 2 - 10 * scale, y);
-      ctx.lineTo(width / 2 + 10 * scale, y);
+      ctx.moveTo(centerX - 10 * scale, y);
+      ctx.lineTo(centerX + 10 * scale, y);
       ctx.stroke();
+    } else {
+      drawHorizontalSegments(y, length);
     }
   }
 }
