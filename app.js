@@ -343,6 +343,14 @@ function updateReadouts() {
   els.heightOverride.value = state.heightOverride ? state.heightOverride.toFixed(1) : currentVisibleHeightMm().toFixed(1);
 }
 
+function updateLockUi() {
+  els.zeroMarker.classList.toggle("locked", state.locked);
+  els.lockButton.setAttribute("aria-pressed", String(state.locked));
+  const lockLabel = state.locked ? "Unlock zero marker" : "Lock zero marker";
+  els.lockButton.setAttribute("aria-label", lockLabel);
+  els.lockButton.title = lockLabel;
+}
+
 let pendingDraw = 0;
 
 function scheduleDraw() {
@@ -363,8 +371,7 @@ function draw() {
   els.canvas.style.width = `${rect.width}px`;
   els.canvas.style.height = `${rect.height}px`;
   els.ruler.style.setProperty("--zero-y", `${state.zeroY * 100}%`);
-  els.zeroMarker.classList.toggle("locked", state.locked);
-  els.lockButton.setAttribute("aria-pressed", String(state.locked));
+  updateLockUi();
 
   const ctx = els.canvas.getContext("2d");
   drawTicks(ctx, els.canvas.width, els.canvas.height);
@@ -439,6 +446,7 @@ function bindEvents() {
 
   els.lockButton.addEventListener("click", () => {
     state.locked = !state.locked;
+    updateLockUi();
     persist();
     scheduleDraw();
   });

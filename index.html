@@ -19,7 +19,18 @@
             <button type="button" class="unit-button active" data-unit="cm">cm</button>
             <button type="button" class="unit-button" data-unit="in">in</button>
           </div>
-          <button id="lockButton" class="square-button" type="button" aria-pressed="false" title="Lock zero marker">⌖</button>
+          <button id="lockButton" class="square-button lock-button" type="button" aria-pressed="false" title="Lock zero marker" aria-label="Lock zero marker">
+            <svg class="lock-icon lock-open-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M7 11V8a5 5 0 0 1 9.25-2.65" />
+              <rect x="5" y="11" width="14" height="9" rx="2" />
+              <path d="M12 15v2" />
+            </svg>
+            <svg class="lock-icon lock-closed-icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+              <rect x="5" y="11" width="14" height="9" rx="2" />
+              <path d="M12 15v2" />
+            </svg>
+          </button>
         </div>
       </section>
 
@@ -42,11 +53,15 @@
 
         <button id="calibrateButton" class="icon-button calibrate-toggle" type="button" aria-expanded="false">
           <span aria-hidden="true">◎</span>
-          <span>Calibrate visible height</span>
+          <span>Adjust ruler length</span>
         </button>
         <form id="calibrationForm" class="calibration-panel" hidden>
+          <details class="calibration-help">
+            <summary>What is this?</summary>
+            <p>Use this only if the ruler looks slightly off. Measure a real object with a trusted ruler, then adjust this number until the on-screen ruler matches it. Most people can leave it alone.</p>
+          </details>
           <label>
-            <span>Visible screen height</span>
+            <span>Visible ruler length</span>
             <input id="heightOverride" type="number" min="40" max="260" step="0.1" inputmode="decimal">
           </label>
           <button type="submit">Apply</button>
@@ -60,7 +75,7 @@
           <output id="topReadout">0.0 cm at top</output>
         </div>
         <div>
-          <span class="readout-label">Visible span</span>
+          <span class="readout-label">Visible length</span>
           <output id="spanReadout">0.0 cm</output>
         </div>
       </section>
