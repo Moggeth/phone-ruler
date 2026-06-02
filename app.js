@@ -174,7 +174,6 @@ function drawTicks(ctx, width, height) {
   ctx.fillStyle = "#f7fafc";
   ctx.lineCap = "butt";
   ctx.textBaseline = "middle";
-  ctx.font = `${Math.round(18 * scale)}px ui-sans-serif, system-ui, sans-serif`;
 
   for (let offset = -maxOffset; offset <= maxOffset; offset += minorStep) {
     const y = zeroY + offset;
@@ -195,11 +194,19 @@ function drawTicks(ctx, width, height) {
 
     if (isMajor && Math.abs(offset) > minorStep) {
       const value = Math.abs(Math.round(offset / labelStep));
+      ctx.globalAlpha = 1;
+      ctx.font = `700 ${Math.round(18 * scale)}px ui-sans-serif, system-ui, sans-serif`;
       ctx.fillText(String(value), width / 2 + 24 * scale, y);
       ctx.beginPath();
       ctx.moveTo(width / 2 - 16 * scale, y);
       ctx.lineTo(width / 2 + 10 * scale, y);
       ctx.stroke();
+    } else if (isHalf && Math.abs(offset) > labelStep * 0.75) {
+      const value = Math.abs(offset / labelStep);
+      ctx.globalAlpha = 0.7;
+      ctx.font = `650 ${Math.round(12 * scale)}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.fillText(value.toFixed(1), width / 2 + 24 * scale, y);
+      ctx.globalAlpha = 1;
     } else if (!isMajor && minorIndex % 2 === 0) {
       ctx.beginPath();
       ctx.moveTo(width / 2 - 10 * scale, y);
