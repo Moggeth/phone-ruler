@@ -14,7 +14,7 @@ Then visit `http://localhost:4173`.
 
 ## How It Works
 
-- Pick a make and model, or use the detected make/model when available.
+- Tap the phone settings control, then search by make or model.
 - The ruler scale uses the selected phone display diagonal and pixel resolution to estimate physical screen height.
 - The visible viewport is scaled against `screen.height`, so it can work in a browser tab and improves when the page is installed/fullscreen.
 - Drag the zero marker with a finger to align the start point with an object edge.

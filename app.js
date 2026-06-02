@@ -39,17 +39,21 @@ const state = {
   locked: localStorage.getItem("locked") === "true",
   make: localStorage.getItem("make") || "Apple",
   model: localStorage.getItem("model") || "iPhone 17 Pro",
-  heightOverride: Number(localStorage.getItem("heightOverride")) || null
+  heightOverride: Number(localStorage.getItem("heightOverride")) || null,
+  phoneQuery: ""
 };
 
 const els = {
   canvas: document.querySelector("#rulerCanvas"),
   ruler: document.querySelector("#ruler"),
   zeroMarker: document.querySelector("#zeroMarker"),
-  makeInput: document.querySelector("#makeInput"),
-  modelInput: document.querySelector("#modelInput"),
-  makeList: document.querySelector("#makeList"),
-  modelList: document.querySelector("#modelList"),
+  phoneSettingsButton: document.querySelector("#phoneSettingsButton"),
+  closeSettingsButton: document.querySelector("#closeSettingsButton"),
+  settingsBackdrop: document.querySelector("#settingsBackdrop"),
+  settingsSheet: document.querySelector("#settingsSheet"),
+  selectedPhoneLabel: document.querySelector("#selectedPhoneLabel"),
+  phoneSearchInput: document.querySelector("#phoneSearchInput"),
+  phoneResults: document.querySelector("#phoneResults"),
   detectionStatus: document.querySelector("#detectionStatus"),
   topReadout: document.querySelector("#topReadout"),
   spanReadout: document.querySelector("#spanReadout"),
@@ -67,7 +71,10 @@ function displayHeightMm(phone) {
 }
 
 function currentPhone() {
-  return PHONES.find((phone) => phone.make === state.make && phone.model === state.model) || PHONES[0];
+  const phone = PHONES.find((item) => item.make === state.make && item.model === state.model) || PHONES[0];
+  state.make = phone.make;
+  state.model = phone.model;
+  return phone;
 }
 
 function currentVisibleHeightMm() {
@@ -96,15 +103,86 @@ function formatMeasurement(value) {
   return `${value.toFixed(precision)} ${unitLabel()}`;
 }
 
-function populateLists() {
-  const makes = [...new Set(PHONES.map((phone) => phone.make))].sort();
-  els.makeList.replaceChildren(...makes.map((make) => new Option(make, make)));
+function phoneLabel(phone = currentPhone()) {
+  return `${phone.make} ${phone.model}`;
+}
 
-  const models = PHONES.filter((phone) => phone.make === state.make).map((phone) => phone.model);
-  els.modelList.replaceChildren(...models.map((model) => new Option(model, model)));
+function normalize(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
 
-  els.makeInput.value = state.make;
-  els.modelInput.value = state.model;
+function matchingPhones() {
+  const query = normalize(state.phoneQuery);
+  if (!query) {
+    return PHONES;
+  }
+
+  const parts = query.split(/\s+/);
+  return PHONES.filter((phone) => {
+    const haystack = normalize(phoneLabel(phone));
+    return parts.every((part) => haystack.includes(part));
+  });
+}
+
+function updateSelectedPhoneLabel() {
+  els.selectedPhoneLabel.textContent = phoneLabel();
+}
+
+function renderPhoneResults() {
+  const matches = matchingPhones().slice(0, 14);
+  const selected = currentPhone();
+
+  if (!matches.length) {
+    els.phoneResults.replaceChildren(Object.assign(document.createElement("p"), {
+      className: "empty-results",
+      textContent: "No matching phones yet."
+    }));
+    return;
+  }
+
+  const buttons = matches.map((phone) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "phone-option";
+    button.setAttribute("role", "option");
+    button.setAttribute("aria-selected", String(phone.make === selected.make && phone.model === selected.model));
+    button.innerHTML = `<strong>${phone.model}</strong><span>${phone.make}</span>`;
+    button.addEventListener("click", () => selectPhone(phone));
+    return button;
+  });
+
+  els.phoneResults.replaceChildren(...buttons);
+}
+
+function openSettings() {
+  state.phoneQuery = "";
+  els.phoneSearchInput.value = state.phoneQuery;
+  renderPhoneResults();
+  els.settingsBackdrop.hidden = false;
+  els.settingsSheet.hidden = false;
+  els.phoneSettingsButton.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => {
+    els.phoneSearchInput.focus();
+  });
+}
+
+function closeSettings() {
+  els.settingsBackdrop.hidden = true;
+  els.settingsSheet.hidden = true;
+  els.phoneSettingsButton.setAttribute("aria-expanded", "false");
+  els.phoneSettingsButton.focus();
+  scheduleDraw();
+}
+
+function selectPhone(phone) {
+  state.make = phone.make;
+  state.model = phone.model;
+  state.phoneQuery = phoneLabel(phone);
+  els.phoneSearchInput.value = state.phoneQuery;
+  updateSelectedPhoneLabel();
+  renderPhoneResults();
+  persist();
+  scheduleDraw();
 }
 
 function persist() {
@@ -130,9 +208,10 @@ async function detectDevice() {
   if (/iPhone/i.test(ua)) {
     state.make = state.make || "Apple";
     setStatus("iPhone detected; choose exact model", "warn");
-    populateLists();
+    updateSelectedPhoneLabel();
+    renderPhoneResults();
     persist();
-    draw();
+    scheduleDraw();
     return;
   }
 
@@ -145,9 +224,10 @@ async function detectDevice() {
         state.make = match.make;
         state.model = match.model;
         setStatus(`Detected ${match.model}`, "good");
-        populateLists();
+        updateSelectedPhoneLabel();
+        renderPhoneResults();
         persist();
-        draw();
+        scheduleDraw();
         return;
       }
     } catch {
@@ -228,8 +308,20 @@ function updateReadouts() {
   els.heightOverride.value = state.heightOverride ? state.heightOverride.toFixed(1) : currentVisibleHeightMm().toFixed(1);
 }
 
+let pendingDraw = 0;
+
+function scheduleDraw() {
+  cancelAnimationFrame(pendingDraw);
+  pendingDraw = requestAnimationFrame(draw);
+}
+
 function draw() {
   const rect = els.ruler.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) {
+    scheduleDraw();
+    return;
+  }
+
   const scale = window.devicePixelRatio || 1;
   els.canvas.width = Math.max(1, Math.round(rect.width * scale));
   els.canvas.height = Math.max(1, Math.round(rect.height * scale));
@@ -244,15 +336,6 @@ function draw() {
   updateReadouts();
 }
 
-function selectClosestModel() {
-  const models = PHONES.filter((phone) => phone.make === state.make);
-  const exact = models.find((phone) => phone.model.toLowerCase() === els.modelInput.value.toLowerCase());
-  const partial = models.find((phone) => phone.model.toLowerCase().includes(els.modelInput.value.toLowerCase()));
-  const next = exact || partial || models[0];
-  state.model = next.model;
-  els.modelInput.value = state.model;
-}
-
 function bindEvents() {
   document.querySelectorAll(".unit-button").forEach((button) => {
     button.classList.toggle("active", button.dataset.unit === state.unit);
@@ -260,23 +343,28 @@ function bindEvents() {
       state.unit = button.dataset.unit;
       document.querySelectorAll(".unit-button").forEach((item) => item.classList.toggle("active", item === button));
       persist();
-      draw();
+      scheduleDraw();
     });
   });
 
-  els.makeInput.addEventListener("change", () => {
-    const match = PHONES.find((phone) => phone.make.toLowerCase() === els.makeInput.value.toLowerCase());
-    state.make = match?.make || "Apple";
-    state.model = PHONES.find((phone) => phone.make === state.make).model;
-    populateLists();
-    persist();
-    draw();
+  els.phoneSettingsButton.addEventListener("click", openSettings);
+  els.closeSettingsButton.addEventListener("click", closeSettings);
+  els.settingsBackdrop.addEventListener("click", closeSettings);
+  els.phoneSearchInput.addEventListener("input", () => {
+    state.phoneQuery = els.phoneSearchInput.value;
+    renderPhoneResults();
   });
-
-  els.modelInput.addEventListener("change", () => {
-    selectClosestModel();
-    persist();
-    draw();
+  els.phoneSearchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const first = matchingPhones()[0];
+      if (first) {
+        selectPhone(first);
+        closeSettings();
+      }
+    } else if (event.key === "Escape") {
+      closeSettings();
+    }
   });
 
   let dragging = false;
@@ -285,7 +373,7 @@ function bindEvents() {
     const rect = els.ruler.getBoundingClientRect();
     state.zeroY = Math.min(0.98, Math.max(0.02, (clientY - rect.top) / rect.height));
     persist();
-    draw();
+    scheduleDraw();
   };
 
   els.zeroMarker.addEventListener("pointerdown", (event) => {
@@ -310,14 +398,14 @@ function bindEvents() {
       event.preventDefault();
       state.zeroY = Math.min(0.98, Math.max(0.02, state.zeroY + delta));
       persist();
-      draw();
+      scheduleDraw();
     }
   });
 
   els.lockButton.addEventListener("click", () => {
     state.locked = !state.locked;
     persist();
-    draw();
+    scheduleDraw();
   });
 
   els.calibrateButton.addEventListener("click", () => {
@@ -325,6 +413,7 @@ function bindEvents() {
     els.calibrationForm.hidden = !isHidden;
     els.calibrateButton.setAttribute("aria-expanded", String(isHidden));
     if (isHidden) els.heightOverride.focus();
+    scheduleDraw();
   });
 
   els.calibrationForm.addEventListener("submit", (event) => {
@@ -333,21 +422,23 @@ function bindEvents() {
     if (Number.isFinite(value) && value >= 40 && value <= 260) {
       state.heightOverride = value;
       persist();
-      draw();
+      scheduleDraw();
     }
   });
 
   els.resetCalibration.addEventListener("click", () => {
     state.heightOverride = null;
     persist();
-    draw();
+    scheduleDraw();
   });
 
-  window.addEventListener("resize", draw);
-  window.visualViewport?.addEventListener("resize", draw);
+  window.addEventListener("resize", scheduleDraw);
+  window.visualViewport?.addEventListener("resize", scheduleDraw);
+  document.addEventListener("visibilitychange", scheduleDraw);
 }
 
-populateLists();
+updateSelectedPhoneLabel();
+renderPhoneResults();
 bindEvents();
 detectDevice();
-draw();
+scheduleDraw();
